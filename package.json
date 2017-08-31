@@ -1,0 +1,39 @@
+{
+  "name": "filtermatrix",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/expect": "^1.20.2",
+    "expect": "^1.20.2",
+    "keautils": "^1.2.4",
+    "typescript": "^2.3.1"
+  },
+  "scripts": {
+    "pretest": "tsc",
+    "test": "node index.test.js",
+    "prepublish": "tsc"
+  },
+  "keywords": [
+    "filter",
+    "matrix"
+  ],
+  "jest": {
+    "transform": {
+      ".(ts|tsx)": "<rootDir>/node_modules/ts-jest/preprocessor.js"
+    },
+    "testRegex": "(/__tests__/.*|\\.(test|spec))\\.(ts|tsx)$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "json"
+    ],
+    "transformIgnorePatterns": [
+      "<rootDir>/(node_modules)/"
+    ]
+  },
+  "author": "Rafael Salguero Iturrios <rafaelsalgueroiturrios@gmail.com>",
+  "license": "MIT"
+}
