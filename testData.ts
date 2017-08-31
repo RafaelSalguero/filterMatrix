@@ -1,29 +1,29 @@
-export interface Unidad {
+export interface Building {
     id: number;
 }
 
-export interface Equipo {
+export interface Machine {
     id: number;
     idUnidad: number;
 }
 
-export interface Contrato {
+export interface Contract {
     id: number;
 }
 
-export interface ContratoUnidad {
+export interface BuildingContract {
     idUnidad: number;
     idContrato: number;
 }
 
-export const unidades: Unidad[] = [
+export const unidades: Building[] = [
     { id: 1, },
     { id: 2, },
     { id: 3, },
     { id: 4, }
 ];
 
-export const equipos: Equipo[] = [
+export const equipos: Machine[] = [
     //3 equipos en la unidad 1
     { id: 1, idUnidad: 1 },
     { id: 2, idUnidad: 1 },
@@ -35,13 +35,13 @@ export const equipos: Equipo[] = [
     { id: 6, idUnidad: 4 }
 ];
 
-export const contratos: Contrato[] = [
+export const contratos: Contract[] = [
     { id: 1 },
     { id: 2 },
     { id: 3 }
 ];
 
-export const contratoUnidad: ContratoUnidad[] = [
+export const contratoUnidad: BuildingContract[] = [
     //La unidad 1 tiene los contratos 1 y 2
     { idUnidad: 1, idContrato: 1 },
     { idUnidad: 1, idContrato: 2 },

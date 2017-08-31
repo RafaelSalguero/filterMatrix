@@ -1,8 +1,9 @@
 import { intersectKeys, pipe, first } from "keautils";
 export type MatrixInput<ItemTypes> = {[K in keyof ItemTypes]: ItemTypes[K][]};
 export interface ListFilter<TListItem, TValue> {
-    (list: TListItem[], value: TValue): TListItem[];
+    (list: TListItem[], value: TValue | undefined): TListItem[];
 }
+
 
 /**
  * A type that defines a filter matrix
@@ -12,7 +13,7 @@ export type PartialFilterMatrix<ItemTypes> = {[K1 in (keyof ItemTypes)]: {[K2 in
 
 
 /**Apply a filter matrix */
-export function applyFilterMatrix<ItemTypes extends {}>(matrix: FilterMatrix<ItemTypes>, lists: {[K in keyof ItemTypes]: ItemTypes[K][]}, values: ItemTypes): ItemTypes {
+export function applyFilterMatrix<ItemTypes extends {}>(matrix: FilterMatrix<ItemTypes>, lists: MatrixInput<ItemTypes>, values: ItemTypes): MatrixInput<ItemTypes> {
     //Type of a row/column of the matrix
     type Row = keyof ItemTypes;
     type Column = Row;
@@ -20,19 +21,15 @@ export function applyFilterMatrix<ItemTypes extends {}>(matrix: FilterMatrix<Ite
     const matrixKeys = Object.keys(matrix) as (keyof ItemTypes)[];
 
     //Apply a single cell filter to an input element
-    function applyCellFilter<TInputRow extends Row>(row: TInputRow, column: Column, rowInput: ItemTypes[TInputRow]) {
+    function applyCellFilter<TInputRow extends Row>(row: TInputRow, column: Column, rowInput: ItemTypes[TInputRow][]) {
         const columnKey = values[column];
         const func = matrix[row][column];
-        if (func) {
-            return func(rowInput, columnKey)
-        } else {
-            return rowInput;
-        }
+        return func(rowInput, columnKey)
     }
 
     //Apply a full row of filters to an input element
-    function applyRowFilter<TInputRow extends Row>(row: TInputRow, input: ItemTypes[TInputRow]) {
-        return matrixKeys.reduce((key, value) => applyCellFilter(row, key, value), input);
+    function applyRowFilter<TInputRow extends Row>(row: TInputRow, input: ItemTypes[TInputRow][]) {
+        return matrixKeys.reduce((input, column) => applyCellFilter(row, column, input), input);
     }
 
     let ret: any = {};
@@ -48,15 +45,33 @@ export function applyFilterMatrix<ItemTypes extends {}>(matrix: FilterMatrix<Ite
  * Invert a filter matrix function in the form of (list, value) => filter onto the form of (value, list) => filter.
  * Usefull for creating filters that depend exclusively on its matrix counterpart
  */
-export function invertFilter<TListItem, TValue>(cell: (list: TListItem[], value: TValue) => TListItem[]): (list: TValue[], value: TListItem) => TValue[]
-export function invertFilter<TListItem, TValue, TExtraData>(cell: (list: TListItem[], value: TValue, extraData: TExtraData) => TListItem[]): (list: TValue[], value: TListItem, extraData: TExtraData) => TValue[]
-export function invertFilter<TListItem, TValue, TExtraData>(cell: (list: TListItem[], value: TValue, extraData: TExtraData) => TListItem[]): (list: TValue[], value: TListItem, extraData: TExtraData) => TValue[] {
+export function invertFilter<TListItem, TValue>(cell: (list: TListItem[], value: TValue | undefined) => TListItem[]): (list: TValue[], value: TListItem | undefined) => TValue[]
+export function invertFilter<TListItem, TValue, TExtraData>(cell: (list: TListItem[], value: TValue, extraData: TExtraData) => TListItem[]): (list: TValue[], value: TListItem | undefined, extraData: TExtraData) => TValue[]
+export function invertFilter<TListItem, TValue, TExtraData>(cell: (list: TListItem[], value: TValue, extraData: TExtraData) => TListItem[]): (list: TValue[], value: TListItem | undefined, extraData: TExtraData) => TValue[] {
     return (list, value, extraData) => {
+        if (value === undefined) return list;
         //Un de TValueKey encaja con uno de TListKey si el filtro cell para ([valor], elemento) devuelve mas de 0 elementos
         const testFunction = (item: TValue) => cell([value], item, extraData).length > 0;
         return list.filter(testFunction);
     };
 }
+
+/**
+ * Return a filter that returns all items from the list when the value is undefined
+ * @param filter An input filter
+ */
+export function onUndefinedAll<TListItem, TValue>(filter: (list: TListItem[], value: TValue) => TListItem[]): (list: TListItem[], value: TValue | undefined) => TListItem[]
+export function onUndefinedAll<TListItem, TValue, TExtraData>(filter: (list: TListItem[], value: TValue, extraData: TExtraData) => TListItem[])
+export function onUndefinedAll<TListItem, TValue, TExtraData>(filter: (list: TListItem[], value: TValue, extraData: TExtraData) => TListItem[]) {
+    return (list: TListItem[], value: TValue | undefined, extraData: TExtraData) => {
+        if (value === undefined)
+            return list;
+        else
+            return filter(list, value, extraData);
+    }
+}
+
+
 
 /**
  * Filter a list by a given many to many relationship
@@ -87,7 +102,7 @@ export function joinFilter<TOut, TIn, TMid>(
     filterMidByOut: ListFilter<TMid, TOut>,
     filterMidByIn: ListFilter<TMid, TIn>,
 ) {
-    return (list: TOut[], value: TIn, allMid: TMid[]) => {
+    return (list: TOut[], value: TIn | undefined, allMid: TMid[]) => {
         const filteredMid = filterMidByIn(allMid, value);
         return intersectArrayByFilter(list, filteredMid, (a, b) => filterMidByOut(a, b));
     };
@@ -102,6 +117,7 @@ export function joinFilter<TOut, TIn, TMid>(
  * @param filter 
  */
 export function intersectArrayByFilter<TList, TKey>(items: TList[], keys: TKey[], filter: (items: TKey[], value: TList) => TKey[]) {
+
     return items.filter(item => filter(keys, item).length > 0);
 }
 

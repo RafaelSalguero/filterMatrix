@@ -1,6 +1,6 @@
-import { pipe, intersectKeys } from "keautils";
+import { pipe, intersectKeys, deepEquals } from "keautils";
 import * as expect from "expect";
-import { invertFilter, manyToManyFilter, FilterMatrix, intersectArrayByFilter, joinFilter, MatrixInput } from "./index";
+import { invertFilter, manyToManyFilter, FilterMatrix, intersectArrayByFilter, joinFilter, MatrixInput, applyFilterMatrix, onUndefinedAll } from "./index";
 interface Unidad {
     idUnidad: number;
 }
@@ -75,12 +75,17 @@ interface Relaciones {
 
 const relaciones = { contratoUnidad: data.contratoUnidad };
 
-function unidadesPorContrato(unidades: Unidad[], contrato: Contrato) {
-    return manyToManyFilter(relaciones.contratoUnidad, unidades, contrato.idContrato, x => x.idUnidad, x => x.idUnidad, x => x.idContrato);
+function filterFunctions(relaciones: Relaciones) {
+    const unidadesPorContrato = (unidades: Unidad[], contrato: Contrato) =>
+        manyToManyFilter(relaciones.contratoUnidad, unidades, contrato.idContrato, x => x.idUnidad, x => x.idUnidad, x => x.idContrato);
+
+    const unidadesPorEquipo = (unidades: Unidad[], equipo: Equipo) =>
+        unidades.filter(x => x.idUnidad == equipo.idUnidad);
+
+    return { unidadesPorContrato: onUndefinedAll(unidadesPorContrato), unidadesPorEquipo: onUndefinedAll(unidadesPorEquipo) };
 }
-function unidadesPorEquipo(unidades: Unidad[], equipo: Equipo) {
-    return unidades.filter(x => x.idUnidad == equipo.idUnidad);
-}
+
+const { unidadesPorContrato, unidadesPorEquipo } = filterFunctions(relaciones);
 
 
 console.log("unidades por contrato");
@@ -144,7 +149,7 @@ console.log("intersectar obtener una lista de equipos dada una lista de unidades
     const expected = [data.unidades[0], data.unidades[1]];
 
     const obtenerEquiposPorUnidad = invertFilter(unidadesPorEquipo);
-    const actual = intersectArrayByFilter(data.unidades, equipos, (a, b) => obtenerEquiposPorUnidad(a, b));
+    const actual = intersectArrayByFilter(data.unidades, equipos, obtenerEquiposPorUnidad);
 
     expect(actual).toEqual(expected);
 }
@@ -196,6 +201,15 @@ console.log("Join obtener contratos por equipos");
     expect(actualInv).toEqual(expected);
 }
 
+console.log("Probar filtros con datos vacios");
+{
+    const ret = unidadesPorEquipo(data.unidades, undefined);
+    expect(ret).toEqual(data.unidades);
+
+    const equiposPorUnidad = invertFilter(unidadesPorEquipo);
+    expect(equiposPorUnidad(data.equipos, undefined)).toEqual(data.equipos);
+}
+
 console.log("armar matrix de filtros");
 {
     const equiposPorUnidad = invertFilter(unidadesPorEquipo);
@@ -220,4 +234,98 @@ console.log("armar matrix de filtros");
             equipo: idem
         }
     };
+
+    const applyMatrix = (values: Partial<ItemTypes>) => applyFilterMatrix(matrix, {
+        contrato: data.contratos,
+        unidad: data.unidades,
+        equipo: data.equipos,
+    }, values);
+
+    //Sin filtros debe de devolver todos los elementos:
+    {
+        const actual = applyMatrix({});
+        const expeted: MatrixInput<ItemTypes> = {
+            contrato: data.contratos,
+            equipo: data.equipos,
+            unidad: data.unidades
+        };
+
+        expect(actual).toEqual(expeted);
+    }
+
+    //Seleccionado el equipo 1
+    {
+        const actual = applyMatrix({ equipo: data.equipos[0] });
+        //Tiene la unidad 1, y los contratos 1 y 2
+        const expected: MatrixInput<ItemTypes> = {
+            contrato: [data.contratos[0], data.contratos[1]],
+            equipo: data.equipos,
+            unidad: [data.unidades[0]]
+        };
+
+        expect(actual).toEqual(expected);
+    }
+
+    //Seleccionado el equipo 5
+    {
+        const actual = applyMatrix({ equipo: data.equipos[4] });
+        //Tiene la unidad 4, no tiene contratos:
+        const expected: MatrixInput<ItemTypes> = {
+            contrato: [],
+            equipo: data.equipos,
+            unidad: [data.unidades[3]]
+        };
+
+        expect(actual).toEqual(expected);
+    }
+
+    //Seleccionado el contrato 2
+    {
+        const actual = applyMatrix({ contrato: data.contratos[1] });
+        //Tiene las unidades [1, 2] 
+        //Estas unidades tienen los equipos [1,2,3,4,7]
+        const expected: MatrixInput<ItemTypes> = {
+            contrato: data.contratos,
+            equipo: [1, 2, 3, 4, 7].map(id => data.equipos[id - 1]),
+            unidad: [1, 2].map(id => data.unidades[id - 1])
+        };
+
+        expect(actual).toEqual(expected);
+    }
+
+    //Seleccionada la unidad 2
+    {
+        const actual = applyMatrix({ unidad: data.unidades[1] });
+        //Tiene los equipos: [4, 7]
+        //Tiene los contratos: [2, 3]
+
+        const expected: MatrixInput<ItemTypes> = {
+            contrato: [2, 3].map(id => data.contratos[id - 1]),
+            equipo: [4, 7].map(id => data.equipos[id - 1]),
+            unidad: data.unidades
+        };
+
+        expect(actual).toEqual(expected);
+    }
+
+    //Seleccionamos el contrato 2 y el equipo 7
+    {
+        const actual = applyMatrix({
+            contrato: data.contratos[1],
+            equipo: data.equipos[6]
+        });
+
+        //El contrato 2 tiene las unidades 2 y 3
+        //Las unidades 2 y 3 tienen los equipos [1,2,3,4,7]
+        //El equipo 7 tiene la unidad 2
+
+        //La unidad 2 tiene los contratos 2 y 3
+        const expected: MatrixInput<ItemTypes> = {
+            contrato: [2, 3].map(id => data.contratos[id - 1]),
+            equipo: [1, 2, 3, 4, 7].map(id => data.equipos[id - 1]),
+            unidad: [2].map(id => data.unidades[id - 1])
+        };
+
+        expect(actual).toEqual(expected);
+    }
 }
