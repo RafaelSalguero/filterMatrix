@@ -1,6 +1,10 @@
 # FilterMatrix
 Define relationships between selectors as a matrix of filter functions
 
+```
+npm install --save filtermatrix
+```
+
 ## Define your filters:
 
 Filters must be in the form `(items: TItem[], value: TValue) => TItem[]`
