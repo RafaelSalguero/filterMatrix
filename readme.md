@@ -5,6 +5,7 @@ Define relationships between selectors as a matrix of filter functions
 
 Filters must be in the form `(items: TItem[], value: TValue) => TItem[]`
 
+Where `items` is the list to be filtered and `value` is an item selected on another selector
 ```ts
 interface Relations: {
     buildingContract: BuildingContract[];
@@ -81,4 +82,16 @@ function getFilterMatrix(data: Data) {
         }
     };
 }
+```
+
+## Apply the filter matrix:
+```ts
+
+//Return all lists, filtered by the given selected items
+const selectedValues = {
+    contract: data.contracts[1],
+    machine: data.machine[6]
+};
+const filteredLists = applyMatrix(myMatrix, myData, selectedValues);
+
 ```
