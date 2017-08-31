@@ -5,12 +5,54 @@ export interface ListFilter<TListItem, TValue> {
 }
 
 
+export type FilterMatrixRow<ItemTypes, K1 extends keyof ItemTypes> = {[K2 in (keyof ItemTypes)]: ListFilter<ItemTypes[K1], ItemTypes[K2]> };
 /**
  * A type that defines a filter matrix
  */
-export type FilterMatrix<ItemTypes> = {[K1 in (keyof ItemTypes)]: {[K2 in (keyof ItemTypes)]: ListFilter<ItemTypes[K1], ItemTypes[K2]> } };
+export type FilterMatrix<ItemTypes> = {[K1 in (keyof ItemTypes)]: FilterMatrixRow<ItemTypes, K1> };
 export type PartialFilterMatrix<ItemTypes> = {[K1 in (keyof ItemTypes)]: {[K2 in (keyof ItemTypes)]?: ListFilter<ItemTypes[K1], ItemTypes[K2]> } };
 
+/**
+ * Create a filter matrix from a filter row. Uses filter joins and inversions for filling all matrix cells based on the given filter vector
+ * @see invertFilter is used on columns equal to the given row and @see joinFilter on all others.
+ * On columns equals to the current row, an idempotent function is used
+ * @param givenRow The given row
+ * @param vector The vector of filters used as a basis for generating all other filters
+ * @param lists All items from the list, used as input for the joined filters
+ */
+export const createMatrixFromRow = <ItemTypes extends {}, Row extends keyof ItemTypes>(vector: FilterMatrixRow<ItemTypes, Row>, givenRow: Row) => ( rowItems: ItemTypes[Row][]) => {
+    /*
+	U			E			S			C
+U   _   		UE   		UC 	  		UD	
+E   i(UE) 		_			j(UE,US)	j(UE,UC)
+S	i(US)		j(US,UE)	_			j(US, UC)
+C	i(UC)		j(UC,UE)	j(UC,US)	_
+
+    */
+    
+    const keys = Object.keys(vector) as (keyof ItemTypes)[];
+    let ret = {} as FilterMatrix<ItemTypes>;
+    const idem = x => x;
+    for (let row of keys) {
+        if (row == givenRow) {
+            //The given row is passed as is
+            ret[row] = vector;
+        } else {
+            ret[row] = {} as FilterMatrixRow<ItemTypes, typeof row>;
+            for (let column of keys) {
+                ret[row][column] = 
+                    //Si la fila y columna es igual, idempotencia
+                    row == column ? idem :
+                    //Si la columna == a la fila dada, inversionm
+                    column == givenRow ? invertFilter(vector[row]) :
+                    //Union de los filtros de la fila, con el de la columna actual
+                    joinFilter(vector[row], vector[column])(rowItems);
+            }
+        }
+    }
+
+    return ret;
+}
 
 /**Apply a filter matrix */
 export function applyFilterMatrix<ItemTypes extends {}>(matrix: FilterMatrix<ItemTypes>, lists: MatrixInput<ItemTypes>, values: ItemTypes): MatrixInput<ItemTypes> {
@@ -98,7 +140,7 @@ export function joinFilter<TOut, TIn, TMid>(
     filterMidByOut: ListFilter<TMid, TOut>,
     filterMidByIn: ListFilter<TMid, TIn>,
 ) {
-    return  (allMid: TMid[]) => (list: TOut[], value: TIn | undefined) => {
+    return (allMid: TMid[]) => (list: TOut[], value: TIn | undefined) => {
         const filteredMid = filterMidByIn(allMid, value);
         return intersectArrayByFilter(list, filteredMid, (a, b) => filterMidByOut(a, b));
     };
@@ -113,7 +155,5 @@ export function joinFilter<TOut, TIn, TMid>(
  * @param filter 
  */
 export function intersectArrayByFilter<TList, TKey>(items: TList[], keys: TKey[], filter: (items: TKey[], value: TList) => TKey[]) {
-
     return items.filter(item => filter(keys, item).length > 0);
 }
-

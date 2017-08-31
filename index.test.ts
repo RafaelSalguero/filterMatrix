@@ -1,6 +1,6 @@
 import { pipe, intersectKeys, deepEquals } from "keautils";
 import * as expect from "expect";
-import { invertFilter, manyToManyFilter, FilterMatrix, intersectArrayByFilter, joinFilter, MatrixInput, applyFilterMatrix, onUndefinedAll } from "./index";
+import { invertFilter, manyToManyFilter, FilterMatrix, intersectArrayByFilter, joinFilter, MatrixInput, applyFilterMatrix, onUndefinedAll, FilterMatrixRow, createMatrixFromRow } from "./index";
 interface Unidad {
     idUnidad: number;
 }
@@ -210,8 +210,7 @@ console.log("Probar filtros con datos vacios");
     expect(equiposPorUnidad(data.equipos, undefined)).toEqual(data.equipos);
 }
 
-console.log("armar matrix de filtros");
-{
+function createMatrixManually() {
     const equiposPorUnidad = invertFilter(unidadesPorEquipo);
     const contratoPorUnidad = invertFilter(unidadesPorContrato);
     const contratoPorEquipo = joinFilter(unidadesPorContrato, unidadesPorEquipo);
@@ -226,7 +225,7 @@ console.log("armar matrix de filtros");
         contrato: {
             unidad: contratoPorUnidad,
             contrato: idem,
-            equipo:  contratoPorEquipo(data.unidades),
+            equipo: contratoPorEquipo(data.unidades),
         },
         equipo: {
             unidad: equiposPorUnidad,
@@ -234,7 +233,20 @@ console.log("armar matrix de filtros");
             equipo: idem
         }
     };
+    return matrix;
+}
 
+function createMatrixAutomatically() : FilterMatrix<ItemTypes> {
+    const row: FilterMatrixRow<ItemTypes, "unidad"> = {
+        unidad: x => x,
+        contrato: unidadesPorContrato,
+        equipo: unidadesPorEquipo
+    };
+
+    return createMatrixFromRow(row, "unidad")(data.unidades);
+}
+
+function testMatrix(matrix: FilterMatrix<ItemTypes>) {
     const applyMatrix = (values: Partial<ItemTypes>) => applyFilterMatrix(matrix, {
         contrato: data.contratos,
         unidad: data.unidades,
@@ -329,3 +341,9 @@ console.log("armar matrix de filtros");
         expect(actual).toEqual(expected);
     }
 }
+
+console.log("probar matrix armada manualmente");
+testMatrix(createMatrixManually());
+
+console.log("probar matrix armada automaticamente");
+testMatrix(createMatrixAutomatically());

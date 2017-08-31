@@ -33,29 +33,17 @@ const getBaseFilters = (relations: Relations)  => ({
     
 ```
 
-## Composable filters
-Filters that are in function on your base filters can be derived using functions such as `invertFilter`, `joinFilter`
+## Build the matrix from a row of filters
 ```ts
-function getFilters(myRelations)
-{
-    const baseFilters = getBaseFilters(myRelations);
-    const filters =  {
-        ...baseFilters, 
+function getFilterMatrix(data: Data) {
+    const { buildingByContract, buldingsByMachine} = getFilters(data);
+    const row = { building: x => x, contract: buildingByContract, machine: buldingsByMachine};
 
-        //Invert filters
-        machinesByBuilding: invertFilter(buildingsByMachine),
-        contractByBuilding: invertFilter(buildingsByContract),
-
-        //Derive a filter from two other filters
-        contractByMachine: joinFilter(buildingsByContract, buildingsByMachine),
-        machinesByContract: joinFilter(buildingsByMachine, buildingsByContract)
-    };
-
-    return filters;
+    return createMatrixFromRow(row, "building")(data.buildings);
 }
 ```
 
-## Build a filter matrix
+## Or build the filter matrix manually
 ```ts
 type ItemTypes = {
     building: Building;
@@ -66,7 +54,7 @@ type ItemTypes = {
 type Data = { [K in keyof ItemTypes]: ItemTypes[K]} & Relations;
 
 function getFilterMatrix(data: Data) {
-    const { buildingByContract, buldingsByMachine, ...} = getFilters(data);
+    const { buildingByContract, buldingsByMachine} = getFilters(data);
 
     //Idempotent function, a filter that pass the input as-is
     const idem = x => x;
@@ -77,13 +65,13 @@ function getFilterMatrix(data: Data) {
             machine: buildingsByMachine,
         },
         contract: {
-            building: contractByBuilding,
+            building: invertFilter(buildingsByContract),
             contract: idem,
-            machine: contractByMachine(data.buildings),
+            machine: joinFilter(buildingsByContract, buildingsByMachine)(data.buildings),
         },
         machine: {
-            building: machinesByBuilding,
-            contract: machinesByContract(data.buildings),
+            building: invertFilter(buildingsByMachine),
+            contract:  joinFilter(buildingsByMachine, buildingsByContract)(data.buildings),
             machine: idem
         }
     };
