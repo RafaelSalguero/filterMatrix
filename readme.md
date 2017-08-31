@@ -75,6 +75,8 @@ function getFilterMatrix(data: Data) {
             machine: idem
         }
     };
+
+    return applyMatrix(matrix)(data);
 }
 ```
 
@@ -86,6 +88,7 @@ const selectedValues = {
     contract: data.contracts[1],
     machine: data.machine[6]
 };
-const filteredLists = applyMatrix(myMatrix, myData, selectedValues);
+const myMatrix = getFilterMatrix(data);
+const filteredLists = myMatrix(selectedValues);
 
 ```

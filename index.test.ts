@@ -247,11 +247,11 @@ function createMatrixAutomatically() : FilterMatrix<ItemTypes> {
 }
 
 function testMatrix(matrix: FilterMatrix<ItemTypes>) {
-    const applyMatrix = (values: Partial<ItemTypes>) => applyFilterMatrix(matrix, {
+    const applyMatrix =  applyFilterMatrix(matrix)({
         contrato: data.contratos,
         unidad: data.unidades,
         equipo: data.equipos,
-    }, values);
+    });
 
     //Sin filtros debe de devolver todos los elementos:
     {

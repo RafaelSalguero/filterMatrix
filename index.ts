@@ -20,7 +20,7 @@ export type PartialFilterMatrix<ItemTypes> = {[K1 in (keyof ItemTypes)]: {[K2 in
  * @param vector The vector of filters used as a basis for generating all other filters
  * @param lists All items from the list, used as input for the joined filters
  */
-export const createMatrixFromRow = <ItemTypes extends {}, Row extends keyof ItemTypes>(vector: FilterMatrixRow<ItemTypes, Row>, givenRow: Row) => ( rowItems: ItemTypes[Row][]) => {
+export const createMatrixFromRow = <ItemTypes extends {}, Row extends keyof ItemTypes>(vector: FilterMatrixRow<ItemTypes, Row>, givenRow: Row) => (rowItems: ItemTypes[Row][]) => {
     /*
 	U			E			S			C
 U   _   		UE   		UC 	  		UD	
@@ -29,7 +29,7 @@ S	i(US)		j(US,UE)	_			j(US, UC)
 C	i(UC)		j(UC,UE)	j(UC,US)	_
 
     */
-    
+
     const keys = Object.keys(vector) as (keyof ItemTypes)[];
     let ret = {} as FilterMatrix<ItemTypes>;
     const idem = x => x;
@@ -40,13 +40,13 @@ C	i(UC)		j(UC,UE)	j(UC,US)	_
         } else {
             ret[row] = {} as FilterMatrixRow<ItemTypes, typeof row>;
             for (let column of keys) {
-                ret[row][column] = 
+                ret[row][column] =
                     //Si la fila y columna es igual, idempotencia
                     row == column ? idem :
-                    //Si la columna == a la fila dada, inversionm
-                    column == givenRow ? invertFilter(vector[row]) :
-                    //Union de los filtros de la fila, con el de la columna actual
-                    joinFilter(vector[row], vector[column])(rowItems);
+                        //Si la columna == a la fila dada, inversionm
+                        column == givenRow ? invertFilter(vector[row]) :
+                            //Union de los filtros de la fila, con el de la columna actual
+                            joinFilter(vector[row], vector[column])(rowItems);
             }
         }
     }
@@ -55,7 +55,7 @@ C	i(UC)		j(UC,UE)	j(UC,US)	_
 }
 
 /**Apply a filter matrix */
-export function applyFilterMatrix<ItemTypes extends {}>(matrix: FilterMatrix<ItemTypes>, lists: MatrixInput<ItemTypes>, values: ItemTypes): MatrixInput<ItemTypes> {
+export const applyFilterMatrix = <ItemTypes extends {}>(matrix: FilterMatrix<ItemTypes>) => (lists: MatrixInput<ItemTypes>) => (values: Partial<ItemTypes>): MatrixInput<ItemTypes> => {
     //Type of a row/column of the matrix
     type Row = keyof ItemTypes;
     type Column = Row;
