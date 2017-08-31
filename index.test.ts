@@ -174,7 +174,7 @@ console.log("Join obtener equipos por contrato");
     const equiUni3 = [data.equipos[7]];
     const expected = [...equiUni1, ...equiUni3];
 
-    const actual = obtenerEquiposPorContrato(data.equipos, cont1, data.unidades);
+    const actual = obtenerEquiposPorContrato(data.unidades)(data.equipos, cont1);
 
     expect(actual).toEqual(expected);
 }
@@ -189,14 +189,14 @@ console.log("Join obtener contratos por equipos");
 
     //La unidad 2 tiene los contratos 2 y 3
     const expected = [data.contratos[1], data.contratos[2]];
-    const actual = obtenerContratosPorEquipo(data.contratos, equi4, data.unidades);
+    const actual = obtenerContratosPorEquipo(data.unidades)(data.contratos, equi4);
 
     expect(actual).toEqual(expected);
 
     //Invertimos el join al reves, y la función debe de ser equivalente:
     const obtenerEquiposPorContrato = joinFilter(unidadesPorEquipo, unidadesPorContrato);
-    const obtenerContratosPorEquipoInv = invertFilter(obtenerEquiposPorContrato);
-    const actualInv = obtenerContratosPorEquipoInv(data.contratos, equi4, data.unidades);
+    const obtenerContratosPorEquipoInv = (unidades: Unidad[]) => invertFilter(obtenerEquiposPorContrato(unidades));
+    const actualInv = obtenerContratosPorEquipoInv(data.unidades)(data.contratos, equi4);
 
     expect(actualInv).toEqual(expected);
 }
@@ -226,11 +226,11 @@ console.log("armar matrix de filtros");
         contrato: {
             unidad: contratoPorUnidad,
             contrato: idem,
-            equipo: (contratos, equipo) => contratoPorEquipo(contratos, equipo, data.unidades),
+            equipo:  contratoPorEquipo(data.unidades),
         },
         equipo: {
             unidad: equiposPorUnidad,
-            contrato: (equipos, contrato) => equiposPorContrato(equipos, contrato, data.unidades),
+            contrato: equiposPorContrato(data.unidades),
             equipo: idem
         }
     };

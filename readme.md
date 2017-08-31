@@ -79,11 +79,11 @@ function getFilterMatrix(data: Data) {
         contract: {
             building: contractByBuilding,
             contract: idem,
-            machine: (contratos, equipo) => contractByMachine(contratos, equipo, data.buildings),
+            machine: contractByMachine(data.buildings),
         },
         machine: {
             building: machinesByBuilding,
-            contract: (equipos, contrato) => machinesByContract(equipos, contrato, data.buildings),
+            contract: machinesByContract(data.buildings),
             machine: idem
         }
     };

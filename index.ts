@@ -45,13 +45,11 @@ export function applyFilterMatrix<ItemTypes extends {}>(matrix: FilterMatrix<Ite
  * Invert a filter matrix function in the form of (list, value) => filter onto the form of (value, list) => filter.
  * Usefull for creating filters that depend exclusively on its matrix counterpart
  */
-export function invertFilter<TListItem, TValue>(cell: (list: TListItem[], value: TValue | undefined) => TListItem[]): (list: TValue[], value: TListItem | undefined) => TValue[]
-export function invertFilter<TListItem, TValue, TExtraData>(cell: (list: TListItem[], value: TValue, extraData: TExtraData) => TListItem[]): (list: TValue[], value: TListItem | undefined, extraData: TExtraData) => TValue[]
-export function invertFilter<TListItem, TValue, TExtraData>(cell: (list: TListItem[], value: TValue, extraData: TExtraData) => TListItem[]): (list: TValue[], value: TListItem | undefined, extraData: TExtraData) => TValue[] {
-    return (list, value, extraData) => {
+export function invertFilter<TListItem, TValue>(cell: (list: TListItem[], value: TValue | undefined) => TListItem[]): (list: TValue[], value: TListItem | undefined) => TValue[] {
+    return (list, value) => {
         if (value === undefined) return list;
         //Un de TValueKey encaja con uno de TListKey si el filtro cell para ([valor], elemento) devuelve mas de 0 elementos
-        const testFunction = (item: TValue) => cell([value], item, extraData).length > 0;
+        const testFunction = (item: TValue) => cell([value], item).length > 0;
         return list.filter(testFunction);
     };
 }
@@ -60,14 +58,12 @@ export function invertFilter<TListItem, TValue, TExtraData>(cell: (list: TListIt
  * Return a filter that returns all items from the list when the value is undefined
  * @param filter An input filter
  */
-export function onUndefinedAll<TListItem, TValue>(filter: (list: TListItem[], value: TValue) => TListItem[]): (list: TListItem[], value: TValue | undefined) => TListItem[]
-export function onUndefinedAll<TListItem, TValue, TExtraData>(filter: (list: TListItem[], value: TValue, extraData: TExtraData) => TListItem[])
-export function onUndefinedAll<TListItem, TValue, TExtraData>(filter: (list: TListItem[], value: TValue, extraData: TExtraData) => TListItem[]) {
-    return (list: TListItem[], value: TValue | undefined, extraData: TExtraData) => {
+export function onUndefinedAll<TListItem, TValue>(filter: (list: TListItem[], value: TValue) => TListItem[]): (list: TListItem[], value: TValue | undefined) => TListItem[] {
+    return (list: TListItem[], value: TValue | undefined) => {
         if (value === undefined)
             return list;
         else
-            return filter(list, value, extraData);
+            return filter(list, value);
     }
 }
 
@@ -102,7 +98,7 @@ export function joinFilter<TOut, TIn, TMid>(
     filterMidByOut: ListFilter<TMid, TOut>,
     filterMidByIn: ListFilter<TMid, TIn>,
 ) {
-    return (list: TOut[], value: TIn | undefined, allMid: TMid[]) => {
+    return  (allMid: TMid[]) => (list: TOut[], value: TIn | undefined) => {
         const filteredMid = filterMidByIn(allMid, value);
         return intersectArrayByFilter(list, filteredMid, (a, b) => filterMidByOut(a, b));
     };
