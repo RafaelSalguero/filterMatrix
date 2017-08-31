@@ -30,6 +30,7 @@ const getBaseFilters = (relations: Relations)  => ({
 ```
 
 ## Composable filters
+Filters that are in function on your base filters can be derived using functions such as `invertFilter`, `joinFilter`
 ```ts
 function getFilters(myRelations)
 {
@@ -63,6 +64,7 @@ type Data = { [K in keyof ItemTypes]: ItemTypes[K]} & Relations;
 function getFilterMatrix(data: Data) {
     const { buildingByContract, buldingsByMachine, ...} = getFilters(data);
 
+    //Idempotent function, a filter that pass the input as-is
     const idem = x => x;
     const matrix: FilterMatrix<ItemTypes> = {
         building: {
